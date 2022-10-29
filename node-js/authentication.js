@@ -1,10 +1,10 @@
-var object = require('./lib/object.js');
-var logger = require('./lib/logger.js');
-var SQL = require('./lib/SQL.js');
-var sessionManager = require("./lib/sessionManager.js");
-var managerCookie = require('./lib/managerCookie.js');
-var managerFiles = require('./lib/managerFiles.js');
-var crypter = require('./lib/crypter');
+var object = require('./object.js');
+var logger = require('./logger.js');
+var SQL = require('./SQL.js');
+var sessionManager = require("./sessionManager.js");
+var managerCookie = require('./managerCookie.js');
+var managerFiles = require('./managerFiles.js');
+var crypter = require('./crypter');
 
 const key = `rq^xPo!BudY%KNycJdAT*t^vQZ*tHm$3*dS%io^aWzt6^aTYxquXFq^2HYS2e4caY9@!#F52VbZUtAjXrULk@3`
 
