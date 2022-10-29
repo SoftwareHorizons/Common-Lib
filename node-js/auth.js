@@ -23,14 +23,14 @@ exports.login = async (req, res, next) => { // TODO sistemare login failed per t
                 var token = sessionManager.add(userData.data.userid, userData.data.username);
 
                 if (!sessionManager.isSessionExpired(token)) {
-                    logger.info("Authentication.js", "Login from userid " + userData.data.username + " Status: SUCCEDEED");
+                    logger.info("auth.js", "Login from " + userData.data.username + " Status: SUCCEDEED");
                     managerCookie.createCookie(res, "token", token);
                     res.status(200).json({
                         message: "login succeeded",
                         token: token
                     });
                 } else {
-                    logger.warning("Authentication.js", "Login from userid " + userData.data.username + " Status: unable to retrive token")
+                    logger.warning("auth.js", "Login from " + userData.data.username + " Status: unable to retrive token")
                     managerCookie.createCookie(res, "token", "");
                     res.status(401).json({
                         message: "Unable to retrive token",
@@ -39,7 +39,7 @@ exports.login = async (req, res, next) => { // TODO sistemare login failed per t
                 }
             }
             else {
-                logger.warning("Authentication.js", "Login from userid " + req.body.data.username + " Status: Invalid userid or password")
+                logger.warning("auth.js", "Login from " + req.body.data.username + " Status: Invalid userid or password")
                 managerCookie.createCookie(res, "token", "");
                 res.status(401).json({
                     message: "Invalid userid or password"
@@ -48,7 +48,7 @@ exports.login = async (req, res, next) => { // TODO sistemare login failed per t
         })
     } // Auth from usr and passw{}
     else {
-        logger.warning("Authentication.js", "Login from userid " + req.body.data.username + " Status: Invalid userid or password")
+        logger.warning("auth.js", "Login from " + req.body.data.username + " Status: Invalid userid or password")
         managerCookie.createCookie(res, "token", "");
         res.status(400).json({
             message: "Login failed username null"
@@ -58,14 +58,14 @@ exports.login = async (req, res, next) => { // TODO sistemare login failed per t
 exports.logout = async (req, res, next) => {
     var userIdLoggedOut = sessionManager.remove(req.body.token)
     if (userIdLoggedOut >= 0) {
-        logger.info("Authentication.js", "User " + userIdLoggedOut + " successfully logged out.")
+        logger.info("auth.js", "User " + userIdLoggedOut + " successfully logged out.")
         managerCookie.createCookie(res, "token", ""); // add token to the cookie page
         res.status(200).json({
             message: "Successfully logged out"
         });
     }
     else {
-        logger.warning("Authentication.js", "Unable to remove session for " + req.body.token);
+        logger.warning("auth.js", "Unable to remove session for " + req.body.token);
         managerCookie.createCookie(res, "token", ""); // add token to the cookie page
         res.status(400).json({
             message: "Error during logged out"
@@ -79,35 +79,53 @@ exports.renewSession = async (req, res, next) => {
         res.status(200).json({ token: token });
     }
     else {
-        //logger.warning("Authentication.js", "Renew token failed for " + req.body.token);
+        //logger.warning("auth.js", "Renew token failed for " + req.body.token);
         managerCookie.createCookie(res, "token", ""); // add token to the cookie page
         res.status(401).json({
             message: "Unable to renew session token null"
         }); // remove token to the cookie page
     }
 }
-exports.getDataUserFromToken = function (dataAuth, callback) {
-    getDataUserFromToken(dataAuth.token, function (userData) {
-        if (userData.result == "OK")
-            callback({ result: "OK", data: userData.data });
-        else
-            callback({ result: "ERROR" });
-    });
-}
-exports.RequestGetUserData = async (req, res, next) => {
+exports.isUserAuthenticated = async (req, res, next) => {
     var token = req.body.token
     if (token != "")
         getDataUserFromToken(token, function (userData) {
             if (userData.result == "OK") {
-                logger.info("Authentication.js", "User " + userData.username + " request his data");
-                res.status(200).json(maskPassword(userData.data));
+                res.locals.userData = userData.data;
+                next();
             }
             else {
-                logger.warning("Authentication.js", "Unable to get userdata for " + userData.userid);
+                logger.warning("auth.js", "Unable to get userdata for " + userData.data.userid);
                 res.json(400).json({});
             }
-        })
-}
+            /*          if (!object.isNull(userData)) {
+                         
+                     }
+                     else {
+                         logger.warning("Unable to get userdata for " + userData.userid, "auth.js");
+                         res.status(401).json({});
+                     } */
+        });
+    else {
+        logger.warning("Token invalid", "auth.js");
+        res.status(401).json({});
+    }
+
+},
+    exports.RequestGetUserData = async (req, res, next) => {
+        var token = req.body.token
+        if (token != "")
+            getDataUserFromToken(token, function (userData) {
+                if (userData.result == "OK") {
+                    logger.info("auth.js", "User " + userData.data.username + " request his data");
+                    res.status(200).json(maskPassword(userData.data));
+                }
+                else {
+                    logger.warning("auth.js", "Unable to get userdata for " + userData.data.userid);
+                    res.json(400).json({});
+                }
+            })
+    }
 
 
 exports.clearSession = function () {
@@ -174,7 +192,7 @@ exports.getUserIDFromUsername = function (username, callback) {
                 });
             }
             else {
-                logger.error("Authentication.js", "Unable to retrive userid");
+                logger.error("auth.js", "Unable to retrive userid");
                 callback({
                     result: "ERROR",
                     msg: "User not found"
@@ -200,7 +218,7 @@ function convertQueryUserTojson(queryResult) {
             var SQLParser = require('./SQLParser')
             SQLParser.loadSQLResult(queryResult.line, queryResult.columnTitle)
 
-            var password = crypter.decrypt(SQLParser.getParameterFromLine(0, "Password"), key)
+            var password = crypter.decrypt(SQLParser.getParameterFromLine(0, "Password"), KEY)
 
             var response = {
                 userid: Number(SQLParser.getParameterFromLine(0, "UserID")),
@@ -250,7 +268,7 @@ function getDataUser(username, password, callback) {
 
                 if (result != null) {
                     if (result.line.length == 1) {
-                        var passw = crypter.decrypt(SQLParser.getParameterFromLine(0, "Password"), key)
+                        var passw = crypter.decrypt(SQLParser.getParameterFromLine(0, "Password"), KEY)
                         if (passw.length >= MIN_PASSWORD_LENGTH) {
                             if (passw != password)
                                 callback({
@@ -269,7 +287,7 @@ function getDataUser(username, password, callback) {
                             }
                         }
                         else {
-                            logger.error("Authentication.js", "Min password length found!")
+                            logger.error("auth.js", "Min password length found!")
                             callback({ result: "ERROR", msg: "Min password length found" })
                         }
                     }
@@ -283,7 +301,7 @@ function getDataUser(username, password, callback) {
                     });
 
             }).catch(function (err) {
-                logger.error("Authentication.js", err)
+                logger.error("auth.js", err)
                 callback({
                     result: "ERROR",
                     msg: "Unable to connect to db"
@@ -343,7 +361,7 @@ function getDataUserFromUsrId(usrid, callback) {
                     })
             })
             .catch(function (err) {
-                logger.error("Authentication.js", err);
+                logger.error("auth.js", err);
                 callback({
                     result: "ERROR",
                     msg: err
@@ -351,7 +369,7 @@ function getDataUserFromUsrId(usrid, callback) {
             })
 
     } else {
-        logger.error("Authentication.js", "Error in function getDataUserFromUsrId usrid is null");
+        logger.error("auth.js", "Error in function getDataUserFromUsrId usrid is null");
         callback({
             result: "ERROR",
             msg: "usrid is null"
