@@ -131,7 +131,7 @@ exports.init = function (configSql) {
 function convertQueryUserTojson(queryResult) {
     try {
 
-        var SQLParser = require('./lib/SQLParser')
+        var SQLParser = require('./SQLParser')
         SQLParser.loadSQLResult(queryResult.line, queryResult.columnTitle)
         var password = crypter.decrypt(SQLParser.getParameterFromLine(0, "Password"), key)
 
@@ -197,7 +197,7 @@ function getDataUser(username, password, callback) {
             `;
         SQL.singleQuery(connectionOptions, query)
             .then(function (result) {
-                var SQLParser = require('./lib/SQLParser')
+                var SQLParser = require('./SQLParser')
                 SQLParser.loadSQLResult(result.line, result.columnTitle)
 
                 if (result != null) {
