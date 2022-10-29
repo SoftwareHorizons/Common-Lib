@@ -5,9 +5,8 @@ var sessionManager = require("./sessionManager.js");
 var managerCookie = require('./managerCookie.js');
 var managerFiles = require('./managerFiles.js');
 var crypter = require('./crypter');
-var json = require('./json')
 
-var key = `gyg8gsd5788u09op0iig565r56e54xwzqw23wy98u90i0`
+var KEY = `gyg8gsd5788u09op0iig565r56e54xwzqw23wy98u90i0`
 var MIN_PASSWORD_LENGTH = 0
 
 sessionManager.init(30, 60, true, 300);
@@ -20,7 +19,7 @@ exports.login = async (req, res, next) => { // TODO sistemare login failed per t
             req.body.data.password = ""
 
         getDataUser(req.body.data.username, req.body.data.password, function (userData) {
-            if (userData.result=="OK") {
+            if (userData.result == "OK") {
                 var token = sessionManager.add(userData.data.userid, userData.data.username);
 
                 if (!sessionManager.isSessionExpired(token)) {
@@ -89,7 +88,7 @@ exports.renewSession = async (req, res, next) => {
 }
 exports.getDataUserFromToken = function (dataAuth, callback) {
     getDataUserFromToken(dataAuth.token, function (userData) {
-        if (userData.result=="OK")
+        if (userData.result == "OK")
             callback({ result: "OK", data: userData.data });
         else
             callback({ result: "ERROR" });
@@ -99,7 +98,7 @@ exports.RequestGetUserData = async (req, res, next) => {
     var token = req.body.token
     if (token != "")
         getDataUserFromToken(token, function (userData) {
-            if (userData.result=="OK") {
+            if (userData.result == "OK") {
                 logger.info("Authentication.js", "User " + userData.username + " request his data");
                 res.status(200).json(maskPassword(userData.data));
             }
@@ -115,8 +114,10 @@ exports.clearSession = function () {
     sessionManager.clear();
 }
 
-exports.init = function (pathConfig) {
+exports.init = function (pathConfig, CryptKey, minPasswLength) {
     connectionOptions = JSON.parse(managerFiles.read(pathConfig))
+    KEY = CryptKey;
+    MIN_PASSWORD_LENGTH = minPasswLength;
 }
 
 exports.initWithJson = function (jsonConfig) {
@@ -135,10 +136,10 @@ exports.getListUsersIDs = function (callback) {
         .then(function (result) {
             var list = []
             var SQLParser = require('./SQLParser')
-                SQLParser.loadSQLResult(result.line, result.columnTitle)
-            
+            SQLParser.loadSQLResult(result.line, result.columnTitle)
+
             for (let index = 0; index < result.line.length; index++) {
-                list.push(SQLParser.getParameterFromLine(index,"UserID"))
+                list.push(SQLParser.getParameterFromLine(index, "UserID"))
             }
 
             callback({
