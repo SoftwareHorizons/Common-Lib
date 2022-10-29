@@ -56,16 +56,16 @@ exports.login = async (req, res, next) => { // TODO sistemare login failed per t
     }
 }
 exports.logout = async (req, res, next) => {
-    var userIdLoggedOut = sessionManager.remove(req.body.token)
-    if (userIdLoggedOut >= 0) {
-        logger.info("auth.js", "User " + userIdLoggedOut + " successfully logged out.")
+    var data = sessionManager.remove(req.body.token)
+    if (data !={}) {
+        logger.info("auth.js", "User " + data.username + " successfully logged out.")
         managerCookie.createCookie(res, "token", ""); // add token to the cookie page
         res.status(200).json({
             message: "Successfully logged out"
         });
     }
     else {
-        logger.warning("auth.js", "Unable to remove session for " + req.body.token);
+        logger.warning("auth.js", "Unable to remove session");
         managerCookie.createCookie(res, "token", ""); // add token to the cookie page
         res.status(400).json({
             message: "Error during logged out"
@@ -95,7 +95,12 @@ exports.isUserAuthenticated = async (req, res, next) => {
                 next();
             }
             else {
-                logger.warning("auth.js", "Unable to get userdata for " + userData.data.userid);
+                try {
+                    logger.warning("auth.js", "Unable to get userdata for " + userData.data.userid);
+                } catch (error) {
+                    logger.warning("auth.js", "Unable to get userdata from token");
+                }
+                
                 res.json(400).json({});
             }
             /*          if (!object.isNull(userData)) {

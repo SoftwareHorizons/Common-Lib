@@ -86,11 +86,11 @@ function removeSession(token) {
     {
         for (var c = 0; c < getSessionLenght(); c++) {
             if (dataAuthentications.sessions[c].token == token) {
-                var id = dataAuthentications.sessions[c].userid;
+                var data = dataAuthentications.sessions[c];
                 dataAuthentications.sessions.splice(c, 1)
                 logger.info("sessionManager.js", "Current sessions active: " + getSessionLenght())
                 printActiveSession();
-                return id;
+                return data;
             }
         }
         logger.warning("sessionManager.js", "Token not found")
@@ -98,7 +98,7 @@ function removeSession(token) {
     else
         logger.warning("sessionManager.js", "Token invalid")
 
-    return -1;
+    return {};
 }
 
 function printListSession(array) {
