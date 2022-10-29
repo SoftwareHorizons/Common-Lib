@@ -24,8 +24,8 @@ module.exports = {
         if (needRenew)
             setInterval(clear, (Number(clearDeadSessionTimeSec) * 1000)); //pulisce le sessioni ogni 5 min
     },
-    add: function (userid) {
-        return generateNewSession(userid);
+    add: function (userid, name = "Unknown") {
+        return generateNewSession(userid, name);
     },
     renew: function (token) {
         return renewSessionFn(token)
@@ -48,7 +48,7 @@ function clear() {
     var session = getSessionLenght();
     if (session > 0) {
         clearDeadSession();
-        logger.info("sessionManager.js","Clear dead sessions...Session cleared: " + (session - getSessionLenght()))
+        logger.info("sessionManager.js", "Clear dead sessions...Session cleared: " + (session - getSessionLenght()))
         if (session - getSessionLenght() > 0)
             printActiveSession();
     }
@@ -65,6 +65,8 @@ function getDataUserFromToken(token) {
             }
         }
     }
+    else
+        logger.warning("sessionManager.js", "Token invalid")
 }
 
 
@@ -73,6 +75,7 @@ function clearDeadSession() {
         var currtoken = dataAuthentications.sessions[i].token
         if (isTokenExpired(currtoken)) {
             dataAuthentications.sessions.splice(i, 1);
+            logger.warning("sessionManager.js", "Session expired for " + dataAuthentications.sessions[i].username)
         }
     }
 }
@@ -85,12 +88,15 @@ function removeSession(token) {
             if (dataAuthentications.sessions[c].token == token) {
                 var id = dataAuthentications.sessions[c].userid;
                 dataAuthentications.sessions.splice(c, 1)
-                logger.info("sessionManager.js","Current sessions active: " + getSessionLenght())
+                logger.info("sessionManager.js", "Current sessions active: " + getSessionLenght())
                 printActiveSession();
                 return id;
             }
         }
+        logger.warning("sessionManager.js", "Token not found")
     }
+    else
+        logger.warning("sessionManager.js", "Token invalid")
 
     return -1;
 }
@@ -111,7 +117,7 @@ function printListSession(array) {
             startStr = current.lastrequest.split('.');
             var end = new Date(startStr[0], startStr[1], startStr[2], startStr[3], startStr[4], startStr[5]);
             var timespan = time.getTimespan(start, end)
-            string += ' | ' + current.userid + '       | ' + current.creationDate + ' | ' + current.lastrequest + ' | ' + timespan.days + 'dd ' + timespan.hours + 'hh ' + timespan.minutes + 'mm ' + timespan.seconds + 'ss |\n'
+            string += ' | ' + current.username + '       | ' + current.creationDate + ' | ' + current.lastrequest + ' | ' + timespan.days + 'dd ' + timespan.hours + 'hh ' + timespan.minutes + 'mm ' + timespan.seconds + 'ss |\n'
         }
     string += ' | ------ | ----------------- | ----------------- | ----------------- |\n'
     console.log(string)
@@ -128,11 +134,9 @@ function renewSessionFn(token) {
             for (var c = 0; c < getSessionLenght(); c++) {
                 if (dataAuthentications.sessions[c].token == token) {
                     dataAuthentications.sessions[c].lastrequest = time.provideDate();
-                    return dataAuthentications.sessions[c].token = getToken();
+                    return dataAuthentications.sessions[c].token = generateToken();
                 }
             }
-        } else {
-            logger.error("sessionManager.js","Token invalid or expired");
         }
     }
     else
@@ -142,19 +146,20 @@ function renewSessionFn(token) {
 }
 
 function getSessionLenght() {
-    var c = 0;
-    try {
-        while (true) {
-            var test = dataAuthentications.sessions[c].lastrequest;
-            c++;
+    /*     var c = 0;
+        try {
+            while (true) {
+                var test = dataAuthentications.sessions[c].lastrequest;
+                c++;
+            }
+        } catch {
+            //logger.error("sessionManager.js","Error in function getSessionLenght");
         }
-    } catch {
-        //logger.error("sessionManager.js","Error in function getSessionLenght");
-    }
-    return c;
+        return c; */
+    return dataAuthentications.sessions.length;
 }
 
-function getToken() {
+function generateToken() {
     var ntoken = "";
     var found = false;
     while (!found) { //fino a che non trova un token che non è gia presente
@@ -186,33 +191,42 @@ function isTokenExpired(token) //controlla che il token non sia scaduto
 
                     if (time.convertTimeSpanToSec(res) <= settings.tokenMaxTimeSec)
                         return false;
-                    else
+                    else {
+                        logger.warning("sessionManager.js", "Session expired for " + dataAuthentications.sessions[c].username)
                         return true;
+                    }
                 }
                 else
                     return false;
 
             }
         }
+        logger.warning("sessionManager.js", "Token not found")
     }
+    else
+        logger.warning("sessionManager.js", "Token invalid")
+
+
     return true;
 }
 
 
-function generateNewSession(userid) {
-    var ntoken = "";
+function generateNewSession(userid, username) {
     if (!object.isNull(String(userid))) {
-
-        ntoken = getToken();
         var data = {
-            token: ntoken,
+            token: generateToken(),
             userid: userid,
+            username: username,
             creationDate: time.provideDate(),
             lastrequest: time.provideDate()
         };
 
         dataAuthentications.sessions.push(data);
         printActiveSession()
+
+        return data.token
     }
-    return ntoken;
+    else
+        logger.warning("sessionManager.js", "Invalid userid unable to create token")
+    return "";
 }
