@@ -1,3 +1,4 @@
+"use strict";
 var logger = require('./logger')
 var object = require('./object')
 const fs = require('fs');

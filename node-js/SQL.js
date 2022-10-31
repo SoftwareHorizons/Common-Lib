@@ -1,3 +1,4 @@
+"use strict";
 const logger = require('./logger');
 var object = require('./object.js');
 var Connection = require('tedious').Connection;

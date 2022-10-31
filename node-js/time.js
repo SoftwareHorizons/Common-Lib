@@ -1,3 +1,4 @@
+"use strict";
 module.exports = {
     provideDate: function (format = 0) {
         const dateVar = new Date();

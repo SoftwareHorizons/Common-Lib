@@ -1,3 +1,4 @@
+"use strict";
 var data = {}
 var object = require('./object')
 var logger = require('./logger.js');

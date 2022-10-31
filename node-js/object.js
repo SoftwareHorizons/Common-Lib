@@ -1,3 +1,4 @@
+"use strict";
 module.exports = {
     isNull: function (data) {
         if (data == undefined || data == '' || data == null)

@@ -1,3 +1,4 @@
+"use strict";
 var object = require('./object.js');
 var logger = require('./logger.js');
 var SQL = require('./SQL.js');
@@ -57,7 +58,7 @@ exports.login = async (req, res, next) => { // TODO sistemare login failed per t
 }
 exports.logout = async (req, res, next) => {
     var data = sessionManager.remove(req.body.token)
-    if (data !={}) {
+    if (data != {}) {
         logger.info("auth.js", "User " + data.username + " successfully logged out.")
         managerCookie.createCookie(res, "token", ""); // add token to the cookie page
         res.status(200).json({
@@ -100,8 +101,8 @@ exports.isUserAuthenticated = async (req, res, next) => {
                 } catch (error) {
                     logger.warning("auth.js", "Unable to get userdata from token");
                 }
-                
-                res.json(400).json({});
+
+                res.status(400).json({});
             }
             /*          if (!object.isNull(userData)) {
                          
@@ -116,21 +117,21 @@ exports.isUserAuthenticated = async (req, res, next) => {
         res.status(401).json({});
     }
 
-},
-    exports.RequestGetUserData = async (req, res, next) => {
-        var token = req.body.token
-        if (token != "")
-            getDataUserFromToken(token, function (userData) {
-                if (userData.result == "OK") {
-                    logger.info("auth.js", "User " + userData.data.username + " request his data");
-                    res.status(200).json(maskPassword(userData.data));
-                }
-                else {
-                    logger.warning("auth.js", "Unable to get userdata for " + userData.data.userid);
-                    res.json(400).json({});
-                }
-            })
-    }
+}
+exports.RequestGetUserData = async (req, res, next) => {
+    var token = req.body.token
+    if (token != "")
+        getDataUserFromToken(token, function (userData) {
+            if (userData.result == "OK") {
+                logger.info("auth.js", "User " + userData.data.username + " request his data");
+                res.status(200).json(maskPassword(userData.data));
+            }
+            else {
+                logger.warning("auth.js", "Unable to get userdata for " + userData.data.userid);
+                res.status(400).json({});
+            }
+        })
+}
 
 
 exports.clearSession = function () {
@@ -151,7 +152,7 @@ exports.maskSensitiveData = function (datajs) {
     return maskPassword(datajs)
 }
 
-exports.getListUsersIDs = function (callback) {
+exports.getListUsersIDs = async (req, res, next) => {
     var query = `SELECT *
         FROM [dbo].[UserData]
         `;
@@ -165,15 +166,11 @@ exports.getListUsersIDs = function (callback) {
                 list.push(SQLParser.getParameterFromLine(index, "UserID"))
             }
 
-            callback({
-                result: "OK",
-                data: list
-            })
+
+            res.locals.userList = list;
+            next();
         }).catch(function (err) {
-            callback({
-                result: "ERROR",
-                msg: err
-            })
+            res.status(500).json({});
         })
 }
 
