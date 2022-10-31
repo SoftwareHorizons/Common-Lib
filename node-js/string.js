@@ -1,4 +1,4 @@
-
+"use strict";
 
 function splitWithmultiplespace(text) {
     var lines = text.split('\r\n')

@@ -1,3 +1,4 @@
+"use strict";
 const fs = require('fs');
 var datamanager = require('./managerFiles.js');
 var time = require('./time.js');

@@ -1,3 +1,4 @@
+"use strict";
 var tokenGenerator = require('./tokenGenerator.js');
 var object = require('./object.js');
 var logger = require('./logger.js');
