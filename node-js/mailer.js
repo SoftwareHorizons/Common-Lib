@@ -24,7 +24,7 @@ module.exports = {
     sendEmail: function (to, subject, text, callback) {
         var transporter = nodemailer.createTransport(config);
         var mailOptions = {
-            from: configFile.notify.mail,
+            from: config.auth.user,
             to: to,
             // cc:"",
             // bcc:"",
