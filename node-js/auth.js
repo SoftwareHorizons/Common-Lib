@@ -113,7 +113,7 @@ exports.isUserAuthenticated = async (req, res, next) => {
                      } */
         });
     else {
-        logger.warning("Token invalid", "auth.js");
+        logger.warning("auth.js","Token invalid");
         res.status(401).json({});
     }
 
