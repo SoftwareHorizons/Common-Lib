@@ -10,6 +10,7 @@ Libraries used for our projects
 
  - **node-js** : Used for nodejs programs
  
+   * **auth** : 
    * **crypter** : 
    * **json** : 
    * **string** : used for work with strings
