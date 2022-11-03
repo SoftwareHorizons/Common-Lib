@@ -20,7 +20,7 @@ var downloadMedia = (link, path) => new Promise((resolve, reject) => {
 
     }
     catch (err) {
-        logger.error(err)
+        logger.error("downloader.js",err)
         reject(new Error(err))
 
     }

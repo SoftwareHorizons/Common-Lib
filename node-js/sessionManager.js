@@ -104,8 +104,8 @@ function removeSession(token) {
 
 function printListSession(array) {
     var string = ''
-    string += '\n | UserID | first Login       | Last Renew        | Activity time     |\n'
-    string += ' | ------ | ----------------- | ----------------- | ----------------- |\n'
+    string += '\n | Username | first Login       | Last Renew        | Activity time     |\n'
+    string += ' | -------- | ----------------- | ----------------- | ----------------- |\n'
     var sessionLength = getSessionLenght()
     if (sessionLength == 0)
         string += ' |        |                   |                   |                   |\n'
@@ -120,7 +120,7 @@ function printListSession(array) {
             var timespan = time.getTimespan(start, end)
             string += ' | ' + current.username + '       | ' + current.creationDate + ' | ' + current.lastrequest + ' | ' + timespan.days + 'dd ' + timespan.hours + 'hh ' + timespan.minutes + 'mm ' + timespan.seconds + 'ss |\n'
         }
-    string += ' | ------ | ----------------- | ----------------- | ----------------- |\n'
+    string += ' | -------- | ----------------- | ----------------- | ----------------- |\n'
     console.log(string)
 }
 

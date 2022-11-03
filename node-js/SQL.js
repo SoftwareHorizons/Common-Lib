@@ -58,7 +58,7 @@ function query(query, connection) {
                 };
                 // If no error, then good to go...
                 const request = new Request(query, function (err, rowCount, rows) {
-                    //logger.log('Numero righe ' + rowCount)
+                    
                     if (err) {
                         //console.log(err);
                         reject(new Error("Request error " + err));
