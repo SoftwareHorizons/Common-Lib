@@ -39,8 +39,8 @@ var downloadPageContent = (link) => new Promise((resolve, reject) => {
             resolve(body)
         });
 
-    }).on('error', (e) => {
-        reject(e)
+    }).on('error', (err) => {
+        reject(new Error(err))
     });
 })
 
