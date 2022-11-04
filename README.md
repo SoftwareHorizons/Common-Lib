@@ -23,7 +23,7 @@ Libraries used for our projects
    * **sessionManager** : 
    * **SQL** : make easy query without worry about the handle of the request (require [tedious](https://github.com/tediousjs/tedious))
    * **SQLParser** manage the result of a sql query 
-   * **time** : work with time
+   * **time** : work with time (require [momentjs](https://momentjs.com/))
    * **tokenGenerator** : create a sequence of charachters
    * **downloader** : download video or pages from the web
    
