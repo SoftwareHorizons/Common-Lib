@@ -2,7 +2,6 @@
 var tokenGenerator = require('./tokenGenerator.js');
 var object = require('./object.js');
 var logger = require('./logger.js');
-var time = require('./time.js');
 var dataAuthentications = { sessions: [] };
 
 var settings = {
@@ -75,8 +74,8 @@ function clearDeadSession() {
     for (var i = 0; i < getSessionLenght(); i++) {
         var currtoken = dataAuthentications.sessions[i].token
         if (isTokenExpired(currtoken)) {
-            dataAuthentications.sessions.splice(i, 1);
             logger.warning("sessionManager.js", "Session expired for " + dataAuthentications.sessions[i].username)
+            dataAuthentications.sessions.splice(i, 1);
         }
     }
 }
@@ -112,13 +111,14 @@ function printListSession(array) {
     else
         for (var c = 0; c < sessionLength; c++) {
             var current = array[c]
+            var moment = require('moment');
+            moment.locale("it");
+            var lastRequestTime = moment(current.lastrequest)
+            var creationTime = moment(current.creationDate)
 
-            var startStr = current.creationDate.split('.');
-            var start = new Date(startStr[0], startStr[1], startStr[2], startStr[3], startStr[4], startStr[5]);
-            startStr = current.lastrequest.split('.');
-            var end = new Date(startStr[0], startStr[1], startStr[2], startStr[3], startStr[4], startStr[5]);
-            var timespan = time.getTimespan(start, end)
-            string += ' | ' + current.username + '       | ' + current.creationDate + ' | ' + current.lastrequest + ' | ' + timespan.days + 'dd ' + timespan.hours + 'hh ' + timespan.minutes + 'mm ' + timespan.seconds + 'ss |\n'
+            var now = moment(new Date())
+            var duration = moment.duration(now.diff(creationTime))
+            string += ' | ' + current.username + '       | ' + creationTime.format('lll') + ' | ' + lastRequestTime.format('lll') + ' | ' + duration.days() + 'dd ' + duration.hours() + 'hh ' + duration.minutes() + 'mm ' +duration.seconds() + 'ss |\n'
         }
     string += ' | -------- | ----------------- | ----------------- | ----------------- |\n'
     console.log(string)
@@ -134,7 +134,8 @@ function renewSessionFn(token) {
         if (!isTokenExpired(token)) {
             for (var c = 0; c < getSessionLenght(); c++) {
                 if (dataAuthentications.sessions[c].token == token) {
-                    dataAuthentications.sessions[c].lastrequest = time.provideDate();
+                    var now = new Date();
+                    dataAuthentications.sessions[c].lastrequest = now;
                     return dataAuthentications.sessions[c].token = generateToken();
                 }
             }
@@ -185,12 +186,15 @@ function isTokenExpired(token) //controlla che il token non sia scaduto
         for (var c = 0; c < getSessionLenght(); c++) {
             if (dataAuthentications.sessions[c].token == token) {
                 if (settings.needRenew == true) {
-                    var startStr = dataAuthentications.sessions[c].lastrequest.split('.');
-                    var start = new Date(startStr[0], startStr[1], startStr[2], startStr[3], startStr[4], startStr[5]);
-                    var now = new Date();
-                    var res = time.getTimespan(start, now)
+                    var moment = require('moment');
+                    moment.locale("it");
 
-                    if (time.convertTimeSpanToSec(res) <= settings.tokenMaxTimeSec)
+                    var now = moment(new Date())
+                    var lastReq = moment(dataAuthentications.sessions[c].lastrequest);
+
+                    var duration = moment.duration(now.diff(lastReq))
+                    var durationSec = duration.as('seconds')
+                    if (durationSec <= settings.tokenMaxTimeSec && durationSec >= 0)
                         return false;
                     else {
                         logger.warning("sessionManager.js", "Session expired for " + dataAuthentications.sessions[c].username)
@@ -214,12 +218,13 @@ function isTokenExpired(token) //controlla che il token non sia scaduto
 
 function generateNewSession(userid, username) {
     if (!object.isNull(String(userid))) {
+        var now = new Date();
         var data = {
             token: generateToken(),
             userid: userid,
             username: username,
-            creationDate: time.provideDate(),
-            lastrequest: time.provideDate()
+            creationDate: now,
+            lastrequest: now
         };
 
         dataAuthentications.sessions.push(data);

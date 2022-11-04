@@ -1,15 +1,43 @@
 "use strict";
 module.exports = {
-    provideDate: function (format = 0) {
+    toString: function (format = 0)/*function (datetime, format = "")*/ {
+        /*var now = moment(datetime)
+
+        switch (format) {//.toLowerCase()
+            case 'YYYY.MM.DD.HH.MM.SS':
+                moment.locale("eu");
+                return moment().format('L').replace(new RegExp('-', '/g'), '.') + '.' + moment().format('LTS').replace(new RegExp(':', '/g'), '.');
+                
+            case 'DD.MM.YYYY.HH.MM.SS':
+                moment.locale("it");
+                return moment().format('L').replace(new RegExp('/', '/g'), '.') + '.' + moment().format('LTS').replace(new RegExp(':', '/g'), '.');
+                
+            case 'YYYY/MM/DD HH:MM:SS':
+
+                break;
+            case 'DD/MM/YYYY HH:MM:SS':
+
+                break;
+            case 'YYYY-MM-DD HH:MM:SS':
+
+                break;
+            case 'DD-MM-YYYY HH:MM:SS':
+
+                break;
+
+
+            default:
+                break;
+        }*/
         const dateVar = new Date();
-        var monthCorrect = Number(dateVar.getMonth()) + 1;
+         var monthCorrect = Number(dateVar.getMonth()) + 1;
         if (format == 0)
             return dateVar.getFullYear() + "." + monthCorrect + "." + dateVar.getDate() + "." + dateVar.getHours() + "." + dateVar.getMinutes() + "." + dateVar.getSeconds();
         else if (format == 1)
             return dateVar.getFullYear() + "/" + monthCorrect + "/" + dateVar.getDate() + " " + dateVar.getHours() + ":" + dateVar.getMinutes() + ":" + dateVar.getSeconds();
         else if (format == 2) {
             return date() + '_' + time(1);
-        }
+        } 
     },
     Date: function () {
         return date();
@@ -17,12 +45,7 @@ module.exports = {
     Time: function () {
         return time();
     },
-    getTimespan: function (datetime1, datetime2) {
-        return getTimespan(datetime1, datetime2);
-    },
-    convertTimeSpanToSec: function (timespan) {
-        return convertTimeSpanToSec(timespan);
-    },
+
 };
 
 
@@ -50,33 +73,19 @@ function twoChar(numin) {
         return "0" + numin;
     else
         return numin;
+} 
+
+
+
+exports.getTimespan = function getTimespan(datetime1, datetime2, locale = "it") {
+    var moment = require('moment');
+    moment.locale(locale);
+    var datetime1T = moment(datetime1)
+    var datetime2T = moment(datetime2)
+
+    return moment.duration(datetime1T.diff(datetime2T))
 }
 
-
-
-function getTimespan(datetime1, datetime2) {
-    var diff = datetime2.getTime() - datetime1.getTime();
-    var days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    diff -= days * (1000 * 60 * 60 * 24);
-    var hours = Math.floor(diff / (1000 * 60 * 60));
-    diff -= hours * (1000 * 60 * 60);
-    var mins = Math.floor(diff / (1000 * 60));
-    diff -= mins * (1000 * 60);
-    var seconds = Math.floor(diff / (1000));
-    diff -= seconds * (1000);
-
-    return {
-        days: days,
-        hours: hours,
-        minutes: mins,
-        seconds: seconds
-    }
-}
-
-function convertTimeSpanToSec(timespan) {
-    var res = timespan.days * 86400;
-    res += timespan.hours * 86400;
-    res += timespan.minutes * 60;
-    res += timespan.seconds;
-    return res;
+exports.convertTimeSpanToSec = function convertTimeSpanToSec(timespan) {
+    return timespan.as('seconds');
 }

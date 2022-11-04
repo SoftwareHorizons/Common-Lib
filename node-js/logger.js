@@ -1,10 +1,13 @@
 "use strict";
 const fs = require('fs');
 var datamanager = require('./managerFiles.js');
-var time = require('./time.js');
+var moment = require('moment'); // require
 var logPath = './LOG/'
 var logName = 'LOG'
 
+
+moment().format();
+moment.locale("it");
 
 module.exports = {
     init: function (path, name) {
@@ -12,23 +15,27 @@ module.exports = {
         logName = name;
     },
     warning: function (channel = "", logtext) {
-        makeLog(logtext, 1, channel)
+        makeLog(logtext, 1, channel);
     },
     error: function (channel = "", logtext) {
-        makeLog(logtext, 2, channel)
+        makeLog(logtext, 2, channel);
     },
     info: function (channel = "", logtext) {
-        makeLog(logtext, 0, channel)
+        makeLog(logtext, 0, channel);
     },
     log: function (channel = "", logtext) {
-        makeLog(logtext, 0, channel, false)
+        makeLog(logtext, 0, channel, false);
     },
 };
 
 
 function makeLog(logtext, type, channel, write = true) {
-    var log = time.Date() + '\t' + time.Time() + '\t' + channel + '\t' + getTypeLog(type) + '\t' + logtext;
-    var filename = logPath + "/" + logName + "_" + time.Date() + '.log';
+    var date = moment().format('L');
+    date = date.replace(new RegExp('/', 'g'), '-');
+    var time = moment().format('LTS');
+
+    var log = date + '\t' + time + '\t' + channel + '\t' + getTypeLog(type) + '\t' + logtext;
+    var filename = logPath + "/" + logName + "_" + date + '.log';
 
     switch (getTypeLog(type)) {
         case "ERRO":
