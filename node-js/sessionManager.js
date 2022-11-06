@@ -46,10 +46,11 @@ exports.clear = clear;
 
 function clear() {
     var session = getSessionLenght();
-    if (session > 0) {
-        clearDeadSession();
-        logger.info("sessionManager.js", "Clear dead sessions...Session cleared: " + (session - getSessionLenght()))
-        if (session - getSessionLenght() > 0)
+    clearDeadSession();
+    var sessionCleared = session - getSessionLenght()
+    if (sessionCleared > 0) {
+        logger.info("sessionManager.js", "Clear dead sessions...Session cleared: " + sessionCleared)
+        if (session > 0)
             printActiveSession();
     }
 }
@@ -74,7 +75,7 @@ function clearDeadSession() {
     for (var i = 0; i < getSessionLenght(); i++) {
         var currtoken = dataAuthentications.sessions[i].token
         if (isTokenExpired(currtoken)) {
-            logger.warning("sessionManager.js", "Session expired for " + dataAuthentications.sessions[i].username)
+            logger.warning("sessionManager.js", "clearDeadSession: Session expired for " + dataAuthentications.sessions[i].username)
             dataAuthentications.sessions.splice(i, 1);
         }
     }
