@@ -113,11 +113,12 @@ exports.isUserAuthenticated = async (req, res, next) => {
                      } */
         });
     else {
-        logger.warning("auth.js","Token invalid");
+        logger.warning("auth.js", "Token invalid");
         res.status(401).json({});
     }
 
 }
+
 exports.RequestGetUserData = async (req, res, next) => {
     var token = req.body.token
     if (token != "")
@@ -131,6 +132,36 @@ exports.RequestGetUserData = async (req, res, next) => {
                 res.status(400).json({});
             }
         })
+}
+
+exports.changePassword = async (req, res, next) => { // old, new
+    var userdata = res.locals.userData;
+    var requestData = req.body.data
+    if (userdata.passw == requestData.old) {
+        if (requestData.new.length >= MIN_PASSWORD_LENGTH && userdata.passw != requestData.new) {
+            logger.warning("auth.js", "User " + userdata.username + " change his password")
+            var newpass = crypter.crypt(requestData.new, KEY)
+            var query = `
+            UPDATE [dbo].[UserData]
+               SET [Password] = '${newpass}'
+             WHERE UserID = ${userdata.userid}`
+
+            SQL.singleQuery(connectionOptions, query)
+                .then(function (r) {
+                    res.status(200).json({});
+                }).catch(function (err) {
+                    res.status(500).json({});
+                })
+        }
+        else if (userdata.passw == requestData.new)
+            res.status(400).json({ message: "The new password cannot match the old one" });
+        else
+            res.status(400).json({ message: "New password length invalid! (min " + MIN_PASSWORD_LENGTH + ")" });
+    }
+    else {
+        logger.warning("auth.js", "Someone tried to change password!")
+        res.status(401).json({ message: "Error"});
+    }
 }
 
 
