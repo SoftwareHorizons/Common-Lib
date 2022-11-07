@@ -30,6 +30,7 @@ module.exports = {
 
 
 function makeLog(logtext, type, channel, write = true) {
+    moment.locale("eu");
     var date = moment().format('L');
     date = date.replace(new RegExp('/', 'g'), '-');
     var time = moment().format('LTS');
