@@ -46,10 +46,11 @@ exports.clear = clear;
 
 function clear() {
     var session = getSessionLenght();
-    if (session > 0) {
-        clearDeadSession();
-        logger.info("sessionManager.js", "Clear dead sessions...Session cleared: " + (session - getSessionLenght()))
-        if (session - getSessionLenght() > 0)
+    clearDeadSession();
+    var sessionCleared = session - getSessionLenght()
+    if (sessionCleared > 0) {
+        logger.info("sessionManager.js", "Clear dead sessions...Session cleared: " + sessionCleared)
+        if (session > 0)
             printActiveSession();
     }
 }
@@ -60,7 +61,7 @@ function getDataUserFromToken(token) {
     if (!object.isNull(token) && token.length == settings.tokenLength) //se il token non è nullo
     {
         for (var c = 0; c < getSessionLenght(); c++) {
-            if (dataAuthentications.sessions[c].token == token) {
+            if (dataAuthentications.sessions[c].token == token || dataAuthentications.sessions[c].oldToken == token) {//test
                 return dataAuthentications.sessions[c].userid;
             }
         }
@@ -74,7 +75,7 @@ function clearDeadSession() {
     for (var i = 0; i < getSessionLenght(); i++) {
         var currtoken = dataAuthentications.sessions[i].token
         if (isTokenExpired(currtoken)) {
-            logger.warning("sessionManager.js", "Session expired for " + dataAuthentications.sessions[i].username)
+            logger.warning("sessionManager.js", "clearDeadSession: Session expired for " + dataAuthentications.sessions[i].username)
             dataAuthentications.sessions.splice(i, 1);
         }
     }
@@ -85,7 +86,7 @@ function removeSession(token) {
     if (!object.isNull(token) && token.length == settings.tokenLength) //se il token non è nullo
     {
         for (var c = 0; c < getSessionLenght(); c++) {
-            if (dataAuthentications.sessions[c].token == token) {
+            if (dataAuthentications.sessions[c].token == token || dataAuthentications.sessions[c].oldToken == token) {//test
                 var data = dataAuthentications.sessions[c];
                 dataAuthentications.sessions.splice(c, 1)
                 logger.info("sessionManager.js", "Current sessions active: " + getSessionLenght())
@@ -93,6 +94,7 @@ function removeSession(token) {
                 return data;
             }
         }
+
         logger.warning("sessionManager.js", "Token not found")
     }
     else
@@ -118,7 +120,7 @@ function printListSession(array) {
 
             var now = moment(new Date())
             var duration = moment.duration(now.diff(creationTime))
-            string += ' | ' + current.username + '       | ' + creationTime.format('lll') + ' | ' + lastRequestTime.format('lll') + ' | ' + duration.days() + 'dd ' + duration.hours() + 'hh ' + duration.minutes() + 'mm ' +duration.seconds() + 'ss |\n'
+            string += ' | ' + current.username + '       | ' + creationTime.format('lll') + ' | ' + lastRequestTime.format('lll') + ' | ' + duration.days() + 'dd ' + duration.hours() + 'hh ' + duration.minutes() + 'mm ' + duration.seconds() + 'ss |\n'
         }
     string += ' | -------- | ----------------- | ----------------- | ----------------- |\n'
     console.log(string)
@@ -136,6 +138,7 @@ function renewSessionFn(token) {
                 if (dataAuthentications.sessions[c].token == token) {
                     var now = new Date();
                     dataAuthentications.sessions[c].lastrequest = now;
+                    dataAuthentications.sessions[c].oldToken = dataAuthentications.sessions[c].token; //test
                     return dataAuthentications.sessions[c].token = generateToken();
                 }
             }
@@ -148,16 +151,6 @@ function renewSessionFn(token) {
 }
 
 function getSessionLenght() {
-    /*     var c = 0;
-        try {
-            while (true) {
-                var test = dataAuthentications.sessions[c].lastrequest;
-                c++;
-            }
-        } catch {
-            //logger.error("sessionManager.js","Error in function getSessionLenght");
-        }
-        return c; */
     return dataAuthentications.sessions.length;
 }
 
@@ -184,7 +177,10 @@ function isTokenExpired(token) //controlla che il token non sia scaduto
     if (!object.isNull(token) && token.length == settings.tokenLength) //se il token non è nullo
     {
         for (var c = 0; c < getSessionLenght(); c++) {
-            if (dataAuthentications.sessions[c].token == token) {
+            if (dataAuthentications.sessions[c].token == token || dataAuthentications.sessions[c].oldToken == token) {
+                if (dataAuthentications.sessions[c].oldToken == token)
+                    logger.warning("sessionManager.js", "Old token found " + dataAuthentications.sessions[c].username)
+
                 if (settings.needRenew == true) {
                     var moment = require('moment');
                     moment.locale("it");
@@ -203,9 +199,10 @@ function isTokenExpired(token) //controlla che il token non sia scaduto
                 }
                 else
                     return false;
-
             }
         }
+
+
         logger.warning("sessionManager.js", "Token not found")
     }
     else
@@ -224,7 +221,8 @@ function generateNewSession(userid, username) {
             userid: userid,
             username: username,
             creationDate: now,
-            lastrequest: now
+            lastrequest: now,
+            oldToken:""
         };
 
         dataAuthentications.sessions.push(data);

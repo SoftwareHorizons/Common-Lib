@@ -11,4 +11,15 @@ function createIfNotExists(path) {
 }
 
 
+function remove(path) {
+    if (fs.existsSync(path)) {
+        fs.rmSync(path, { recursive: true });
+        return true // exists
+    }
+    else
+        return false; // not exists
+}
+
+
 exports.createIfNotExists = createIfNotExists;
+exports.remove = remove;

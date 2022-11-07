@@ -34,6 +34,7 @@ function getParameterFromLine(lineIndex, parameterName) {
                 return data.lines[lineIndex][index];
             }
         }
+        return ""
     }
     else
         logger.error("SQLParser.js","Column metadata and line column have different length")
