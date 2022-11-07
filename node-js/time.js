@@ -6,11 +6,11 @@ module.exports = {
         switch (format) {//.toLowerCase()
             case 'YYYY.MM.DD.HH.MM.SS':
                 moment.locale("eu");
-                return moment().format('L').replace(new RegExp('-', '/g'), '.') + '.' + moment().format('LTS').replace(new RegExp(':', '/g'), '.');
+                return moment().format('L').replace(new RegExp('-', 'g'), '.') + '.' + moment().format('LTS').replace(new RegExp(':', 'g'), '.');
                 
             case 'DD.MM.YYYY.HH.MM.SS':
                 moment.locale("it");
-                return moment().format('L').replace(new RegExp('/', '/g'), '.') + '.' + moment().format('LTS').replace(new RegExp(':', '/g'), '.');
+                return moment().format('L').replace(new RegExp('/', 'g'), '.') + '.' + moment().format('LTS').replace(new RegExp(':', 'g'), '.');
                 
             case 'YYYY/MM/DD HH:MM:SS':
 
