@@ -4,7 +4,7 @@ Libraries used for our projects
 
 ## Current Version
 
-**Version:** 05.16
+**Version:** 05.17
 
 ## Structure
 

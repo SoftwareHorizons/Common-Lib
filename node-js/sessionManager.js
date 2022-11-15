@@ -58,7 +58,7 @@ function clear() {
 
 function getDataUserFromToken(token) {
 
-    if (!object.isNull(token) && token.length == settings.tokenLength) //se il token non è nullo
+    if (!object.isNullOrEmpty(token) && token.length == settings.tokenLength) //se il token non è nullo
     {
         for (var c = 0; c < getSessionLenght(); c++) {
             if (dataAuthentications.sessions[c].token == token || dataAuthentications.sessions[c].oldToken == token) {//test
@@ -83,7 +83,7 @@ function clearDeadSession() {
 
 function removeSession(token) {
 
-    if (!object.isNull(token) && token.length == settings.tokenLength) //se il token non è nullo
+    if (!object.isNullOrEmpty(token) && token.length == settings.tokenLength) //se il token non è nullo
     {
         for (var c = 0; c < getSessionLenght(); c++) {
             if (dataAuthentications.sessions[c].token == token || dataAuthentications.sessions[c].oldToken == token) {//test
@@ -109,7 +109,7 @@ function printListSession(array) {
     string += ' | -------- | ----------------- | ----------------- | ----------------- |\n'
     var sessionLength = getSessionLenght()
     if (sessionLength == 0)
-        string += ' |        |                   |                   |                   |\n'
+        string += ' |          |                   |                   |                   |\n'
     else
         for (var c = 0; c < sessionLength; c++) {
             var current = array[c]
@@ -174,7 +174,7 @@ function generateToken() {
 
 function isTokenExpired(token) //controlla che il token non sia scaduto
 {
-    if (!object.isNull(token) && token.length == settings.tokenLength) //se il token non è nullo
+    if (!object.isNullOrEmpty(token) && token.length == settings.tokenLength) //se il token non è nullo
     {
         for (var c = 0; c < getSessionLenght(); c++) {
             if (dataAuthentications.sessions[c].token == token || dataAuthentications.sessions[c].oldToken == token) {
@@ -214,7 +214,7 @@ function isTokenExpired(token) //controlla che il token non sia scaduto
 
 
 function generateNewSession(userid, username) {
-    if (!object.isNull(String(userid))) {
+    if (!object.isNullOrEmpty(String(userid))) {
         var now = new Date();
         var data = {
             token: generateToken(),

@@ -15,8 +15,8 @@ sessionManager.init(30, 60, true, 300);
 var connectionOptions = {}
 //#region AUTH
 exports.login = async (req, res, next) => { // TODO sistemare login failed per token scaduto
-    if (!object.isNull(req.body.data.username)) {
-        if (object.isNull(req.body.data.password)) // avoid crash for c# api
+    if (!object.isNullOrEmpty(req.body.data.username)) {
+        if (object.isNullOrEmpty(req.body.data.password)) // avoid crash for c# api
             req.body.data.password = ""
 
         getDataUser(req.body.data.username, req.body.data.password, function (userData) {
@@ -104,7 +104,7 @@ exports.isUserAuthenticated = async (req, res, next) => {
 
                 res.status(400).json({});
             }
-            /*          if (!object.isNull(userData)) {
+            /*          if (!object.isNullOrEmpty(userData)) {
                          
                      }
                      else {
@@ -139,8 +139,8 @@ exports.changePassword = async (req, res, next) => { // old, new
     var requestData = req.body.data
     if (userdata.passw == requestData.old) {
         if (requestData.new.length >= MIN_PASSWORD_LENGTH && userdata.passw != requestData.new) {
-            logger.warning("auth.js", "User " + userdata.username + " change his password")
-            var newpass = crypter.crypt(requestData.new, KEY)
+            logger.warning("auth.js", "User " + userdata.username + " change his password");
+            var newpass = crypter.crypt(requestData.new, KEY);
             var query = `
             UPDATE [dbo].[UserData]
                SET [Password] = '${newpass}'
@@ -159,8 +159,8 @@ exports.changePassword = async (req, res, next) => { // old, new
             res.status(400).json({ message: "New password length invalid! (min " + MIN_PASSWORD_LENGTH + ")" });
     }
     else {
-        logger.warning("auth.js", "Someone tried to change password!")
-        res.status(401).json({ message: "Error"});
+        logger.warning("auth.js", "Someone tried to change password!");
+        res.status(401).json({ message: "Error" });
     }
 }
 
@@ -205,6 +205,21 @@ exports.getListUsersIDs = async (req, res, next) => {
         })
 }
 
+exports.addUser = async (req, res, next) => {
+    var userdata = res.locals.userData;
+    logger.info("auth.js", "User " + userdata.username + " add a new user.");
+
+    addUser(req.body.data, function (resp) {
+        if (resp == 1) {
+            logger.info("auth.js", "User " + userdata.username + " added user " + req.body.data.username);
+            res.status(200).json({});
+        }
+        else if (resp == 0)
+            res.status(500).json({});
+        else
+            res.status(400).json({});
+    })
+}
 
 exports.getUserIDFromUsername = function (username, callback) {
     var query = `
@@ -243,6 +258,11 @@ exports.getUserIDFromUsername = function (username, callback) {
 
 //#endregion
 
+
+function isOnGroup(userData, groupName) {
+    return userData.group.split(',').includes(groupName);
+}
+exports.isOnGroup = isOnGroup;
 
 
 function convertQueryUserTojson(queryResult) {
@@ -288,7 +308,7 @@ function maskPassword(datajs) {
 }
 
 function getDataUser(username, password, callback) {
-    if (!object.isNull(username)) //utente forse è registrato
+    if (!object.isNullOrEmpty(username)) //utente forse è registrato
     {
         var query = `SELECT * 
             FROM [dbo].[UserData] 
@@ -345,7 +365,7 @@ function getDataUser(username, password, callback) {
 
 function getDataUserFromToken(token, callback) {
 
-    if (!object.isNull(token)) //se il token non è nullo
+    if (!object.isNullOrEmpty(token)) //se il token non è nullo
     {
         var userid = sessionManager.get(token);
         if (!sessionManager.isSessionExpired(token)) {
@@ -373,7 +393,7 @@ function getDataUserFromToken(token, callback) {
 }
 
 function getDataUserFromUsrId(usrid, callback) {
-    if (!object.isNull(usrid) || usrid == 0) //utente forse è registrato
+    if (!object.isNullOrEmpty(usrid) || usrid == 0) //utente forse è registrato
     {
         var query = `SELECT *
         FROM [dbo].[UserData]
@@ -409,5 +429,62 @@ function getDataUserFromUsrId(usrid, callback) {
         })
     }
 
+}
+
+
+function addUser(data, callback) {
+
+    if (!object.isNullOrEmpty(data.username) && !object.isNullOrEmpty(data.name) && !object.isNull(data.surname) && !object.isNull(data.password) && !object.isNullOrEmpty(data.group)) {
+
+        usernameAlreadyExists(data.username, function (exist) {
+            if (!exist) {
+                var newpass = crypter.crypt(data.password, KEY);
+                var query = `INSERT INTO [dbo].[UserData]
+                ([Username],[Name],[Surname],[Password],[Group])
+            VALUES ('${data.username}','${data.name}','${data.surname}','${newpass}','${data.group}')`
+
+                SQL.singleQuery(connectionOptions, query)
+                    .then(function (result) {
+                        callback(1);
+                    })
+                    .catch(function (err) {
+                        logger.error("auth.js", err);
+                        callback(0);
+                    })
+            }
+            else {
+                logger.error("auth.js", "User already exist!");
+                callback(-1);
+            }
+        })
+
+    }
+    else {
+        logger.error("auth.js", "Unable to add user. data missed");
+        callback(-2);
+    }
+
+
+}
+
+
+function usernameAlreadyExists(username, callback) {
+    var query = `SELECT * 
+            FROM [dbo].[UserData] 
+            where CONVERT(NVARCHAR(MAX), Username)='${username}'
+            `;
+
+    SQL.singleQuery(connectionOptions, query)
+        .then(function (result) {
+            if (result.line.length >= 1)
+                callback(true);
+            else
+                callback(false);
+        })
+        .catch(function (err) {
+            logger.error("auth.js", err);
+            //callback(false);
+            throw err;
+        })
 }
 

@@ -47,7 +47,7 @@ function disconnect(connection) {
 
 
 function query(query, connection) {
-    if (!object.isNull(query))
+    if (!object.isNullOrEmpty(query))
         return new Promise(function (resolve, reject) {
             try {
                 var result = [];
@@ -137,7 +137,7 @@ function singleQuery(conn, queryData) {
             connect(conn).then(function (connectionData) {
                 query(queryData, connectionData).then(function (result) {
                     disconnect(connectionData).then(function () {
-                        if (!object.isNull(result))
+                        if (!object.isNullOrEmpty(result))
                             resolve(result)
                         else
                             resolve(null)
