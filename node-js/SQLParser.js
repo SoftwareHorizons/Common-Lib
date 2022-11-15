@@ -6,7 +6,7 @@ var logger = require('./logger.js');
 function loadSQLResult(lines, metadata) {
     data.lines = []
     data.metadata = []
-    if (object.isNull(lines) || object.isNull(metadata))
+    if (object.isNullOrEmpty(lines) || object.isNullOrEmpty(metadata))
         logger.error("SQLParser.js","Data undefined loaded")
     else {
         data.lines = lines;
@@ -23,7 +23,7 @@ function getParameterFromLine(lineIndex, parameterName) {
         return undefined;
     }
 
-    if (object.isNull(parameterName)) {
+    if (object.isNullOrEmpty(parameterName)) {
         logger.error("SQLParser.js","Parameter null")
         return undefined;
     }
