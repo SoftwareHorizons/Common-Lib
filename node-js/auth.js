@@ -190,11 +190,11 @@ exports.getListUsersIDs = async (req, res, next) => {
     SQL.singleQuery(connectionOptions, query)
         .then(function (result) {
             var list = []
-            var SQLParser = require('./SQLParser')
-            SQLParser.loadSQLResult(result.line, result.columnTitle)
+            var SQLParser = require('./SQLParser');
+            SQLParser.loadSQLResult(result.line, result.columnTitle);
 
             for (let index = 0; index < result.line.length; index++) {
-                list.push(SQLParser.getParameterFromLine(index, "UserID"))
+                list.push(SQLParser.getParameterFromLine(index, "UserID"));
             }
 
 
