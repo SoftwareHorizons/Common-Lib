@@ -6,12 +6,23 @@ var logger = require('./logger.js');
 function loadSQLResult(lines, metadata) {
     data.lines = []
     data.metadata = []
-    if (object.isNullOrEmpty(lines) || object.isNullOrEmpty(metadata))
+
+
+    try {
+        var lengthLines = lines.length;
+        var lengthMetadata = metadata.length
+        if (object.isNullOrEmpty(lengthLines) || object.isNullOrEmpty(lengthMetadata))
+            logger.error("SQLParser.js", "Data undefined loaded")
+        else {
+            data.lines = lines;
+            data.metadata = metadata;
+        }
+
+    } catch (error) {
         logger.error("SQLParser.js", "Data undefined loaded")
-    else {
-        data.lines = lines;
-        data.metadata = metadata;
     }
+
+
 
 }
 

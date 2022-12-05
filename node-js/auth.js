@@ -15,153 +15,195 @@ sessionManager.init(30, 60, true, 300);
 var connectionOptions = {}
 //#region AUTH
 exports.login = async (req, res, next) => { // TODO sistemare login failed per token scaduto
-    if (!object.isNullOrEmpty(req.body.data.username)) {
-        if (object.isNullOrEmpty(req.body.data.password)) // avoid crash for c# api
-            req.body.data.password = ""
+    try {
+        if (!object.isNullOrEmpty(req.body.data.username)) {
+            if (object.isNullOrEmpty(req.body.data.password)) // avoid crash for c# api
+                req.body.data.password = ""
 
-        getDataUser(req.body.data.username, req.body.data.password, function (userData) {
-            if (userData.result == "OK") {
-                var token = sessionManager.add(userData.data.userid, userData.data.username);
+            getDataUser(req.body.data.username, req.body.data.password, function (userData) {
+                if (userData.result == "OK") {
+                    var token = sessionManager.add(userData.data.userid, userData.data.username);
 
-                if (!sessionManager.isSessionExpired(token)) {
-                    logger.info("auth.js", "Login from " + userData.data.username + " Status: SUCCEDEED");
-                    managerCookie.createCookie(res, "token", token);
-                    res.status(200).json({
-                        message: "login succeeded",
-                        token: token
-                    });
-                } else {
-                    logger.warning("auth.js", "Login from " + userData.data.username + " Status: unable to retrive token")
+                    if (!sessionManager.isSessionExpired(token)) {
+                        logger.info("auth.js", "Login from " + userData.data.username + " Status: SUCCEDEED");
+                        managerCookie.createCookie(res, "token", token);
+                        res.status(200).json({
+                            message: "login succeeded",
+                            token: token
+                        });
+                    } else {
+                        logger.warning("auth.js", "Login from " + userData.data.username + " Status: unable to retrive token")
+                        managerCookie.createCookie(res, "token", "");
+                        res.status(401).json({
+                            message: "Unable to retrive token",
+                            token: token
+                        });
+                    }
+                }
+                else {
+                    logger.warning("auth.js", "Login from " + req.body.data.username + " Status: Invalid userid or password")
                     managerCookie.createCookie(res, "token", "");
                     res.status(401).json({
-                        message: "Unable to retrive token",
-                        token: token
+                        message: "Invalid userid or password"
                     });
                 }
-            }
-            else {
-                logger.warning("auth.js", "Login from " + req.body.data.username + " Status: Invalid userid or password")
-                managerCookie.createCookie(res, "token", "");
-                res.status(401).json({
-                    message: "Invalid userid or password"
-                });
-            }
-        })
-    } // Auth from usr and passw{}
-    else {
-        logger.warning("auth.js", "Login from " + req.body.data.username + " Status: Invalid userid or password")
-        managerCookie.createCookie(res, "token", "");
-        res.status(400).json({
-            message: "Login failed username null"
-        });
+            })
+        } // Auth from usr and passw{}
+        else {
+            logger.warning("auth.js", "Login from " + req.body.data.username + " Status: Invalid userid or password")
+            managerCookie.createCookie(res, "token", "");
+            res.status(401).json({
+                message: "Login failed username null"
+            });
+        }
+    } catch (error) {
+        var message = error + "\n" + error.stack
+        logger.error("auth.js", message);
+        res.status(500).json({});
     }
+
 }
 exports.logout = async (req, res, next) => {
-    var data = sessionManager.remove(req.body.token)
-    if (data != {}) {
-        logger.info("auth.js", "User " + data.username + " successfully logged out.")
-        managerCookie.createCookie(res, "token", ""); // add token to the cookie page
-        res.status(200).json({
-            message: "Successfully logged out"
-        });
+    try {
+        var data = sessionManager.remove(req.body.token)
+        if (data != {}) {
+            logger.info("auth.js", "User " + data.username + " successfully logged out.")
+            managerCookie.createCookie(res, "token", ""); // add token to the cookie page
+            res.status(200).json({
+                message: "Successfully logged out"
+            });
+        }
+        else {
+            logger.warning("auth.js", "Unable to remove session");
+            managerCookie.createCookie(res, "token", ""); // add token to the cookie page
+            res.status(400).json({
+                message: "Error during logged out"
+            });
+        }
+    } catch (error) {
+        var message = error + "\n" + error.stack
+        logger.error("auth.js", message);
+        res.status(401).json({});
     }
-    else {
-        logger.warning("auth.js", "Unable to remove session");
-        managerCookie.createCookie(res, "token", ""); // add token to the cookie page
-        res.status(400).json({
-            message: "Error during logged out"
-        });
-    }
+
 }
 exports.renewSession = async (req, res, next) => {
-    var token = sessionManager.renew(req.body.token);
-    if (!sessionManager.isSessionExpired(token)) {
-        managerCookie.createCookie(res, "token", token); // add token to the cookie page
-        res.status(200).json({ token: token });
+
+    try {
+        var token = sessionManager.renew(req.body.token);
+        if (!sessionManager.isSessionExpired(token)) {
+            managerCookie.createCookie(res, "token", token); // add token to the cookie page
+            res.status(200).json({ token: token });
+        }
+        else {
+            //logger.warning("auth.js", "Renew token failed for " + req.body.token);
+            managerCookie.createCookie(res, "token", ""); // add token to the cookie page
+            res.status(401).json({
+                message: "Unable to renew session token null"
+            }); // remove token to the cookie page
+        }
+    } catch (error) {
+        var message = error + "\n" + error.stack
+        logger.error("auth.js", message);
+        res.status(401).json({});
     }
-    else {
-        //logger.warning("auth.js", "Renew token failed for " + req.body.token);
-        managerCookie.createCookie(res, "token", ""); // add token to the cookie page
-        res.status(401).json({
-            message: "Unable to renew session token null"
-        }); // remove token to the cookie page
-    }
+
 }
 exports.isUserAuthenticated = async (req, res, next) => {
-    var token = req.body.token
-    if (token != "")
-        getDataUserFromToken(token, function (userData) {
-            if (userData.result == "OK") {
-                res.locals.userData = userData.data;
-                next();
-            }
-            else {
-                try {
-                    logger.warning("auth.js", "Unable to get userdata for " + userData.data.userid);
-                } catch (error) {
-                    logger.warning("auth.js", "Unable to get userdata from token");
+    try {
+        var token = req.body.token
+        if (token != "")
+            getDataUserFromToken(token, function (userData) {
+                if (userData.result == "OK") {
+                    res.locals.userData = userData.data;
+                    next();
+                }
+                else {
+                    try {
+                        logger.warning("auth.js", "Unable to get userdata for " + userData.data.userid);
+                    } catch (error) {
+                        logger.warning("auth.js", "Unable to get userdata from token");
+                    }
+
+                    res.status(400).json({});
                 }
 
-                res.status(400).json({});
-            }
-            /*          if (!object.isNullOrEmpty(userData)) {
-                         
-                     }
-                     else {
-                         logger.warning("Unable to get userdata for " + userData.userid, "auth.js");
-                         res.status(401).json({});
-                     } */
-        });
-    else {
-        logger.warning("auth.js", "Token invalid");
+            });
+        else {
+            logger.warning("auth.js", "Token invalid");
+            res.status(401).json({});
+        }
+
+    } catch (error) {
+        var message = error + "\n" + error.stack
+        logger.error("auth.js", message);
         res.status(401).json({});
     }
 
 }
 
 exports.RequestGetUserData = async (req, res, next) => {
-    var token = req.body.token
-    if (token != "")
-        getDataUserFromToken(token, function (userData) {
-            if (userData.result == "OK") {
-                logger.info("auth.js", "User " + userData.data.username + " request his data");
-                res.status(200).json(maskPassword(userData.data));
-            }
-            else {
-                logger.warning("auth.js", "Unable to get userdata for " + userData.data.userid);
-                res.status(400).json({});
-            }
-        })
+    try {
+        var token = req.body.token
+        if (token != "")
+            getDataUserFromToken(token, function (userData) {
+                if (userData.result == "OK") {
+                    logger.info("auth.js", "User " + userData.data.username + " request his data");
+                    res.status(200).json(maskPassword(userData.data));
+                }
+                else {
+                    try {
+                        logger.warning("auth.js", "Unable to get userdata for " + userData.data.userid);
+                    } catch (error) {
+                        logger.warning("auth.js", "Unable to get userdata");
+                    }
+
+                    res.status(400).json({});
+                }
+            })
+    } catch (error) {
+        var message = error + "\n" + error.stack
+        logger.error("auth.js", message);
+        res.status(500).json({});
+    }
+
 }
 
 exports.changePassword = async (req, res, next) => { // old, new
-    var userdata = res.locals.userData;
-    var requestData = req.body.data
-    if (userdata.passw == requestData.old) {
-        if (requestData.new.length >= MIN_PASSWORD_LENGTH && userdata.passw != requestData.new) {
-            logger.warning("auth.js", "User " + userdata.username + " change his password");
-            var newpass = crypter.crypt(requestData.new, KEY);
-            var query = `
+    try {
+        var userdata = res.locals.userData;
+        var requestData = req.body.data
+        if (userdata.passw == requestData.old) {
+            if (requestData.new.length >= MIN_PASSWORD_LENGTH && userdata.passw != requestData.new) {
+                logger.warning("auth.js", "User " + userdata.username + " change his password");
+                var newpass = crypter.crypt(requestData.new, KEY);
+                var query = `
             UPDATE [dbo].[UserData]
                SET [Password] = '${newpass}'
              WHERE UserID = ${userdata.userid}`
 
-            SQL.singleQuery(connectionOptions, query)
-                .then(function (r) {
-                    res.status(200).json({});
-                }).catch(function (err) {
-                    res.status(500).json({});
-                })
+                SQL.singleQuery(connectionOptions, query)
+                    .then(function (r) {
+                        res.status(200).json({});
+                    }).catch(function (err) {
+                        res.status(500).json({});
+                    })
+            }
+            else if (userdata.passw == requestData.new)
+                res.status(400).json({ message: "The new password cannot match the old one" });
+            else
+                res.status(400).json({ message: "New password length invalid! (min " + MIN_PASSWORD_LENGTH + ")" });
         }
-        else if (userdata.passw == requestData.new)
-            res.status(400).json({ message: "The new password cannot match the old one" });
-        else
-            res.status(400).json({ message: "New password length invalid! (min " + MIN_PASSWORD_LENGTH + ")" });
+        else {
+            logger.warning("auth.js", "Someone tried to change password!");
+            res.status(401).json({ message: "Error" });
+        }
+    } catch (error) {
+        var message = error + "\n" + error.stack
+        logger.error("auth.js", message);
+        res.status(500).json({});
     }
-    else {
-        logger.warning("auth.js", "Someone tried to change password!");
-        res.status(401).json({ message: "Error" });
-    }
+
 }
 
 
