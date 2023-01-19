@@ -19,11 +19,11 @@ exports.login = async (req, res, next) => { // TODO sistemare login failed per t
         if (!object.isNullOrEmpty(req.body.data.username)) {
             if (object.isNullOrEmpty(req.body.data.password)) // avoid crash for c# api
                 req.body.data.password = ""
-    
+
             getDataUser(req.body.data.username, req.body.data.password, function (userData) {
                 if (userData.result == "OK") {
                     var token = sessionManager.add(userData.data.userid, userData.data.username);
-    
+
                     if (!sessionManager.isSessionExpired(token)) {
                         logger.info("auth.js", "Login from " + userData.data.username + " Status: SUCCEDEED");
                         managerCookie.createCookie(res, "token", token);
@@ -63,9 +63,9 @@ exports.login = async (req, res, next) => { // TODO sistemare login failed per t
     } catch (error) {
         var message = error + "\n" + error.stack
         logger.error("auth.js", message);
-        res.status(500).json({});
+        res.status(401).json({});
     }
-    
+
 }
 exports.logout = async (req, res, next) => {
     try {
@@ -87,10 +87,10 @@ exports.logout = async (req, res, next) => {
     } catch (error) {
         var message = error + "\n" + error.stack
         logger.error("auth.js", message);
-        res.status(500).json({});
+        res.status(401).json({});
     }
 
-    
+
 }
 exports.renewSession = async (req, res, next) => {
     try {
@@ -109,12 +109,12 @@ exports.renewSession = async (req, res, next) => {
     } catch (error) {
         var message = error + "\n" + error.stack
         logger.error("auth.js", message);
-        res.status(500).json({});
+        res.status(401).json({});
     }
 
-    
+
 }
-exports.isUserAuthenticated = async (req, res, next) => {ù
+exports.isUserAuthenticated = async (req, res, next) => {
     try {
         var token = req.body.token
         if (token != "")
@@ -129,7 +129,7 @@ exports.isUserAuthenticated = async (req, res, next) => {ù
                     } catch (error) {
                         logger.warning("auth.js", "Unable to get userdata from token");
                     }
-    
+
                     res.status(400).json({});
                 }
             });
@@ -142,7 +142,7 @@ exports.isUserAuthenticated = async (req, res, next) => {ù
         logger.error("auth.js", message);
         res.status(401).json({});
     }
-   
+
 
 }
 
@@ -161,7 +161,7 @@ exports.RequestGetUserData = async (req, res, next) => {
                     } catch (error) {
                         logger.warning("auth.js", "Unable to get userdata");
                     }
-                    
+
                     res.status(400).json({});
                 }
             })
@@ -171,7 +171,7 @@ exports.RequestGetUserData = async (req, res, next) => {
         res.status(500).json({});
     }
 
-    
+
 }
 
 exports.changePassword = async (req, res, next) => { // old, new
@@ -186,7 +186,7 @@ exports.changePassword = async (req, res, next) => { // old, new
                 UPDATE [dbo].[UserData]
                    SET [Password] = '${newpass}'
                  WHERE UserID = ${userdata.userid}`
-    
+
                 SQL.singleQuery(connectionOptions, query)
                     .then(function (r) {
                         res.status(200).json({});
@@ -209,7 +209,7 @@ exports.changePassword = async (req, res, next) => { // old, new
         res.status(500).json({});
     }
 
-    
+
 }
 
 
