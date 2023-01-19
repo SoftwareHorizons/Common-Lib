@@ -50,9 +50,13 @@ exports.login = async (req, res, next) => { // TODO sistemare login failed per t
             })
         } // Auth from usr and passw{}
         else {
-            logger.warning("auth.js", "Login from " + req.body.data.username + " Status: Invalid userid or password")
+            try {
+                logger.warning("auth.js", "Login from " + req.body.data.username + " Status: Invalid userid or password")
+            } catch (error) {
+                logger.warning("auth.js", "Login from unknown Status: Invalid userid or password");
+            }
             managerCookie.createCookie(res, "token", "");
-            res.status(401).json({
+            res.status(400).json({
                 message: "Login failed username null"
             });
         }
@@ -86,9 +90,9 @@ exports.logout = async (req, res, next) => {
         res.status(401).json({});
     }
 
+
 }
 exports.renewSession = async (req, res, next) => {
-
     try {
         var token = sessionManager.renew(req.body.token);
         if (!sessionManager.isSessionExpired(token)) {
@@ -107,6 +111,7 @@ exports.renewSession = async (req, res, next) => {
         logger.error("auth.js", message);
         res.status(401).json({});
     }
+
 
 }
 exports.isUserAuthenticated = async (req, res, next) => {
@@ -127,18 +132,17 @@ exports.isUserAuthenticated = async (req, res, next) => {
 
                     res.status(400).json({});
                 }
-
             });
         else {
             logger.warning("auth.js", "Token invalid");
             res.status(401).json({});
         }
-
     } catch (error) {
         var message = error + "\n" + error.stack
         logger.error("auth.js", message);
         res.status(401).json({});
     }
+
 
 }
 
@@ -167,6 +171,7 @@ exports.RequestGetUserData = async (req, res, next) => {
         res.status(500).json({});
     }
 
+
 }
 
 exports.changePassword = async (req, res, next) => { // old, new
@@ -178,9 +183,9 @@ exports.changePassword = async (req, res, next) => { // old, new
                 logger.warning("auth.js", "User " + userdata.username + " change his password");
                 var newpass = crypter.crypt(requestData.new, KEY);
                 var query = `
-            UPDATE [dbo].[UserData]
-               SET [Password] = '${newpass}'
-             WHERE UserID = ${userdata.userid}`
+                UPDATE [dbo].[UserData]
+                   SET [Password] = '${newpass}'
+                 WHERE UserID = ${userdata.userid}`
 
                 SQL.singleQuery(connectionOptions, query)
                     .then(function (r) {
@@ -203,6 +208,7 @@ exports.changePassword = async (req, res, next) => { // old, new
         logger.error("auth.js", message);
         res.status(500).json({});
     }
+
 
 }
 
