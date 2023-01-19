@@ -63,7 +63,7 @@ exports.login = async (req, res, next) => { // TODO sistemare login failed per t
     } catch (error) {
         var message = error + "\n" + error.stack
         logger.error("auth.js", message);
-        res.status(401).json({});
+        res.status(500).json({});
     }
 
 }
