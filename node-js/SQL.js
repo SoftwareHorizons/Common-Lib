@@ -188,7 +188,7 @@ function addTableColumn(table, name, type, length = null) {
     if (length == null)
         table.columns.push({ name: name, type: type })
     else
-        table.columns.push({ name: name, type: tye, length: length })
+        table.columns.push({ name: name, type: type, length: length })
     return table
 }
 
