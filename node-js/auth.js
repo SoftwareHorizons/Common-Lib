@@ -7,13 +7,26 @@ var managerCookie = require('./managerCookie.js');
 var managerFiles = require('./managerFiles.js');
 var crypter = require('./crypter');
 
-var KEY = `gyg8gsd5788u09op0iig565r56e54xwzqw23wy98u90i0`
+var KEY_PASSWORD = ''
+var KEY_TOKEN = ''
 var MIN_PASSWORD_LENGTH = 0
 
-sessionManager.init(30, 60, true, 300);
+
 
 var connectionOptions = {}
 //#region AUTH
+
+exports.init = function (pathConfig, PasswordCryptKey, tokenCriptKey, minPasswLength) {
+    connectionOptions = JSON.parse(managerFiles.read(pathConfig))
+    KEY_PASSWORD = PasswordCryptKey;
+    KEY_TOKEN = tokenCriptKey;
+    MIN_PASSWORD_LENGTH = minPasswLength;
+
+    if (tokenCriptKey.length < 10)
+        logger.warning("auth.js", "Token crypt key is too weak!!")
+    sessionManager.init(60, KEY_TOKEN, 300);
+}
+
 exports.login = async (req, res, next) => { // TODO sistemare login failed per token scaduto
     try {
         if (!object.isNullOrEmpty(req.body.data.username)) {
@@ -26,7 +39,9 @@ exports.login = async (req, res, next) => { // TODO sistemare login failed per t
 
                     if (!sessionManager.isSessionExpired(token)) {
                         logger.info("auth.js", "Login from " + userData.data.username + " Status: SUCCEDEED");
-                        managerCookie.createCookie(res, "token", token);
+                        //managerCookie.createCookie(res, "token", token);
+                        var cookie = "token=\"" + token + "\";SameSite=Lax";
+                        res.setHeader("Set-Cookie", cookie);
                         res.status(200).json({
                             message: "login succeeded",
                             token: token
@@ -69,7 +84,9 @@ exports.login = async (req, res, next) => { // TODO sistemare login failed per t
 }
 exports.logout = async (req, res, next) => {
     try {
-        var data = sessionManager.remove(req.body.token)
+        var token = req.body.token
+        token = token.replace(new RegExp('"', 'g'), '')
+        var data = sessionManager.remove(token)
         if (data != {}) {
             logger.info("auth.js", "User " + data.username + " successfully logged out.")
             managerCookie.createCookie(res, "token", ""); // add token to the cookie page
@@ -92,15 +109,18 @@ exports.logout = async (req, res, next) => {
 
 
 }
+
 exports.renewSession = async (req, res, next) => {
     try {
-        var token = sessionManager.renew(req.body.token);
-        if (!sessionManager.isSessionExpired(token)) {
-            managerCookie.createCookie(res, "token", token); // add token to the cookie page
-            res.status(200).json({ token: token });
+        var token = req.body.token
+        token = token.replace(new RegExp('"', 'g'), '')
+
+        var newToken = sessionManager.renew(token);
+        if (!sessionManager.isSessionExpired(newToken)) {
+            managerCookie.createCookie(res, "token", newToken); // add token to the cookie page
+            res.status(200).json({ token: newToken });
         }
         else {
-            //logger.warning("auth.js", "Renew token failed for " + req.body.token);
             managerCookie.createCookie(res, "token", ""); // add token to the cookie page
             res.status(401).json({
                 message: "Unable to renew session token null"
@@ -111,14 +131,18 @@ exports.renewSession = async (req, res, next) => {
         logger.error("auth.js", message);
         res.status(401).json({});
     }
-
-
 }
+
 exports.isUserAuthenticated = async (req, res, next) => {
     try {
         var token = req.body.token
-        if (token != "")
-            getDataUserFromToken(token, function (userData) {
+        token = token.replace(new RegExp('"', 'g'), '')
+
+        var newToken = sessionManager.renew(token); //renew the token
+
+        if (newToken != ""){
+            managerCookie.createCookie(res, "token", newToken); // add token to the cookie page
+            getDataUserFromToken(newToken, function (userData) {
                 if (userData.result == "OK") {
                     res.locals.userData = userData.data;
                     next();
@@ -133,6 +157,7 @@ exports.isUserAuthenticated = async (req, res, next) => {
                     res.status(400).json({});
                 }
             });
+        }
         else {
             logger.warning("auth.js", "Token invalid");
             res.status(401).json({});
@@ -142,13 +167,12 @@ exports.isUserAuthenticated = async (req, res, next) => {
         logger.error("auth.js", message);
         res.status(401).json({});
     }
-
-
 }
 
 exports.RequestGetUserData = async (req, res, next) => {
     try {
         var token = req.body.token
+        token = token.replace(new RegExp('"', 'g'), '')
         if (token != "")
             getDataUserFromToken(token, function (userData) {
                 if (userData.result == "OK") {
@@ -162,7 +186,7 @@ exports.RequestGetUserData = async (req, res, next) => {
                         logger.warning("auth.js", "Unable to get userdata");
                     }
 
-                    res.status(400).json({});
+                    res.status(401).json({});
                 }
             })
     } catch (error) {
@@ -181,7 +205,7 @@ exports.changePassword = async (req, res, next) => { // old, new
         if (userdata.passw == requestData.old) {
             if (requestData.new.length >= MIN_PASSWORD_LENGTH && userdata.passw != requestData.new) {
                 logger.warning("auth.js", "User " + userdata.username + " change his password");
-                var newpass = crypter.crypt(requestData.new, KEY);
+                var newpass = crypter.crypt(requestData.new, KEY_PASSWORD);
                 var query = `
                 UPDATE [dbo].[UserData]
                    SET [Password] = '${newpass}'
@@ -212,16 +236,6 @@ exports.changePassword = async (req, res, next) => { // old, new
 
 }
 
-
-exports.clearSession = function () {
-    sessionManager.clear();
-}
-
-exports.init = function (pathConfig, CryptKey, minPasswLength) {
-    connectionOptions = JSON.parse(managerFiles.read(pathConfig))
-    KEY = CryptKey;
-    MIN_PASSWORD_LENGTH = minPasswLength;
-}
 
 exports.initWithJson = function (jsonConfig) {
     connectionOptions = jsonConfig
@@ -319,7 +333,7 @@ function convertQueryUserTojson(queryResult) {
             var SQLParser = require('./SQLParser')
             SQLParser.loadSQLResult(queryResult.line, queryResult.columnTitle)
 
-            var password = crypter.decrypt(SQLParser.getParameterFromLine(0, "Password"), KEY)
+            var password = crypter.decrypt(SQLParser.getParameterFromLine(0, "Password"), KEY_PASSWORD)
 
             var response = {
                 userid: Number(SQLParser.getParameterFromLine(0, "UserID")),
@@ -369,7 +383,7 @@ function getDataUser(username, password, callback) {
 
                 if (result != null) {
                     if (result.line.length == 1) {
-                        var passw = crypter.decrypt(SQLParser.getParameterFromLine(0, "Password"), KEY)
+                        var passw = crypter.decrypt(SQLParser.getParameterFromLine(0, "Password"), KEY_PASSWORD)
                         if (passw.length >= MIN_PASSWORD_LENGTH) {
                             if (passw != password)
                                 callback({
@@ -416,7 +430,7 @@ function getDataUserFromToken(token, callback) {
     if (!object.isNullOrEmpty(token)) //se il token non è nullo
     {
         var userid = sessionManager.get(token);
-        if (!sessionManager.isSessionExpired(token)) {
+        if (!sessionManager.isSessionExpired(token) && userid>0) {
             getDataUserFromUsrId(userid, function (userdata) {
                 callback({
                     result: "OK",
@@ -486,7 +500,7 @@ function addUser(data, callback) {
 
         usernameAlreadyExists(data.username, function (exist) {
             if (!exist) {
-                var newpass = crypter.crypt(data.password, KEY);
+                var newpass = crypter.crypt(data.password, KEY_PASSWORD);
                 var query = `INSERT INTO [dbo].[UserData]
                 ([Username],[Name],[Surname],[Password],[Group])
             VALUES ('${data.username}','${data.name}','${data.surname}','${newpass}','${data.group}')`
