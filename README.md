@@ -4,12 +4,26 @@ Libraries used for our projects
 
 ## Current Version
 
-**Version:** 06.00.00
+**Version:** 07.00.00
+
+
+
+## Installation
+
+```bash
+npm install moment --save
+npm install tedious
+npm install cookie-parser
+npm install express
+npm install crypto-js 
+```
+
+
 
 ## Structure
 
  - **node-js** : Used for nodejs programs
- 
+
    * **auth** : 
    * **crypter** : 
    * **json** : 
@@ -35,5 +49,4 @@ Libraries used for our projects
  - [Horidesk](https://github.com/LucaSoftware/Horidesk)
    * [CSVImporter](https://github.com/LucaSoftware/Horidesk-CSVImporter) (Horidesk-Plugin)
  - MeiHub
- 
 

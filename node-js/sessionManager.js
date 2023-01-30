@@ -5,20 +5,17 @@ var logger = require('./logger.js');
 var crypter = require('./crypter');
 
 var settings = {
-    //tokenLength: 30,
     keyToken: "",
-    tokenMaxTimeSec: 300,
-    clearDeadSessionTime: 300
+    timeoutSession: 300,
 }
 
 
 
 module.exports = {
-    init: function (clearDeadSessionTimeSec = 60, keyToken, tokenMaxTimeSec = 300) {
+    init: function (keyToken, timeoutSessionSec = 300) {
         settings = {
             keyToken: keyToken,
-            tokenMaxTimeSec: Number(tokenMaxTimeSec),
-            clearDeadSessionTime: Number(clearDeadSessionTimeSec)
+            timeoutSession: Number(timeoutSessionSec),
         }
     },
     add: function (userid, name = "Unknown") {
@@ -96,7 +93,7 @@ function isTokenExpired(token) //controlla che il token non sia scaduto
 
             var duration = moment.duration(now.diff(lastReq))
             var durationSec = duration.as('seconds')
-            if (durationSec <= settings.tokenMaxTimeSec && durationSec >= 0)
+            if (durationSec <= settings.timeoutSession && durationSec >= 0)
                 return false;
             else {
                 logger.warning("sessionManager.js", "Session expired for " + data.username)

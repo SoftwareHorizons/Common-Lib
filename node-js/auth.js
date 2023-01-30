@@ -2,6 +2,7 @@
 var object = require('./object.js');
 var logger = require('./logger.js');
 var SQL = require('./SQL.js');
+var TYPES = require('tedious').TYPES;
 var sessionManager = require("./sessionManager.js");
 var managerCookie = require('./managerCookie.js');
 var managerFiles = require('./managerFiles.js');
@@ -13,18 +14,18 @@ var MIN_PASSWORD_LENGTH = 0
 
 
 
-var connectionOptions = {}
+var CONNECTION_OPTIONS = {}
 //#region AUTH
 
-exports.init = function (pathConfig, PasswordCryptKey, tokenCriptKey, minPasswLength) {
-    connectionOptions = JSON.parse(managerFiles.read(pathConfig))
+exports.init = function (pathConfig, PasswordCryptKey, tokenCriptKey, minPasswLength, timeoutSession = 30) {
+    CONNECTION_OPTIONS = JSON.parse(managerFiles.read(pathConfig))
     KEY_PASSWORD = PasswordCryptKey;
     KEY_TOKEN = tokenCriptKey;
     MIN_PASSWORD_LENGTH = minPasswLength;
 
     if (tokenCriptKey.length < 10)
         logger.warning("auth.js", "Token crypt key is too weak!!")
-    sessionManager.init(60, KEY_TOKEN, 300);
+    sessionManager.init(KEY_TOKEN, timeoutSession);
 }
 
 exports.login = async (req, res, next) => { // TODO sistemare login failed per token scaduto
@@ -140,7 +141,7 @@ exports.isUserAuthenticated = async (req, res, next) => {
 
         var newToken = sessionManager.renew(token); //renew the token
 
-        if (newToken != ""){
+        if (newToken != "") {
             managerCookie.createCookie(res, "token", newToken); // add token to the cookie page
             getDataUserFromToken(newToken, function (userData) {
                 if (userData.result == "OK") {
@@ -206,12 +207,11 @@ exports.changePassword = async (req, res, next) => { // old, new
             if (requestData.new.length >= MIN_PASSWORD_LENGTH && userdata.passw != requestData.new) {
                 logger.warning("auth.js", "User " + userdata.username + " change his password");
                 var newpass = crypter.crypt(requestData.new, KEY_PASSWORD);
-                var query = `
-                UPDATE [dbo].[UserData]
-                   SET [Password] = '${newpass}'
-                 WHERE UserID = ${userdata.userid}`
+                var param = SQL.emptyParam()
+                param.addInpParam(param, 'UserID', TYPES.BigInt, Number(userdata.userid))
+                param.addInpParam(param, 'NewPassword', TYPES.VarChar, newpass)
 
-                SQL.singleQuery(connectionOptions, query)
+                SQL.singleQuery(CONNECTION_OPTIONS, '[auth].[UpdPassword]', param, true)
                     .then(function (r) {
                         res.status(200).json({});
                     }).catch(function (err) {
@@ -232,13 +232,11 @@ exports.changePassword = async (req, res, next) => { // old, new
         logger.error("auth.js", message);
         res.status(500).json({});
     }
-
-
 }
 
 
 exports.initWithJson = function (jsonConfig) {
-    connectionOptions = jsonConfig
+    CONNECTION_OPTIONS = jsonConfig
 }
 
 exports.maskSensitiveData = function (datajs) {
@@ -246,10 +244,8 @@ exports.maskSensitiveData = function (datajs) {
 }
 
 exports.getListUsersIDs = async (req, res, next) => {
-    var query = `SELECT *
-        FROM [dbo].[UserData]
-        `;
-    SQL.singleQuery(connectionOptions, query)
+    var param = SQL.emptyParam()
+    SQL.singleQuery(CONNECTION_OPTIONS, '[auth].[GetUsers]', param, true)
         .then(function (result) {
             var list = []
             var SQLParser = require('./SQLParser');
@@ -284,14 +280,9 @@ exports.addUser = async (req, res, next) => {
 }
 
 exports.getUserIDFromUsername = function (username, callback) {
-    var query = `
-        SELECT   [UserID]
-                ,[Username]
-        FROM [dbo].[UserData]
-        WHERE CONVERT(NVARCHAR(MAX),Username)='${username}'
-    `;//userdata
-
-    SQL.singleQuery(connectionOptions, query)
+    var param = SQL.emptyParam()
+    SQL.addInpParam(param, 'Username', TYPES.VarChar, username)
+    SQL.singleQuery(CONNECTION_OPTIONS, '[auth].[GetUsers]', param, true)
         .then(function (result) {
             if (result.line.length == 1) {
                 var SQLParser = require('./SQLParser')
@@ -318,13 +309,13 @@ exports.getUserIDFromUsername = function (username, callback) {
 
 }
 
-//#endregion
-
-
 function isOnGroup(userData, groupName) {
     return userData.group.split(',').includes(groupName);
 }
 exports.isOnGroup = isOnGroup;
+
+//#endregion
+
 
 
 function convertQueryUserTojson(queryResult) {
@@ -372,11 +363,9 @@ function maskPassword(datajs) {
 function getDataUser(username, password, callback) {
     if (!object.isNullOrEmpty(username)) //utente forse è registrato
     {
-        var query = `SELECT * 
-            FROM [dbo].[UserData] 
-            where CONVERT(NVARCHAR(MAX), Username)='${username}'
-            `;
-        SQL.singleQuery(connectionOptions, query)
+        var param = SQL.emptyParam()
+        SQL.addInpParam(param, 'Username', TYPES.VarChar, username)
+        SQL.singleQuery(CONNECTION_OPTIONS, '[auth].[GetUsers]', param, true)
             .then(function (result) {
                 var SQLParser = require('./SQLParser')
                 SQLParser.loadSQLResult(result.line, result.columnTitle)
@@ -430,7 +419,7 @@ function getDataUserFromToken(token, callback) {
     if (!object.isNullOrEmpty(token)) //se il token non è nullo
     {
         var userid = sessionManager.get(token);
-        if (!sessionManager.isSessionExpired(token) && userid>0) {
+        if (!sessionManager.isSessionExpired(token) && userid > 0) {
             getDataUserFromUsrId(userid, function (userdata) {
                 callback({
                     result: "OK",
@@ -457,11 +446,9 @@ function getDataUserFromToken(token, callback) {
 function getDataUserFromUsrId(usrid, callback) {
     if (!object.isNullOrEmpty(usrid) || usrid == 0) //utente forse è registrato
     {
-        var query = `SELECT *
-        FROM [dbo].[UserData]
-        where CONVERT(NVARCHAR(MAX), UserID)=${usrid}
-        `;
-        SQL.singleQuery(connectionOptions, query)
+        var param = SQL.emptyParam()
+        SQL.addInpParam(param, 'UserID', TYPES.BigInt, usrid)
+        SQL.singleQuery(CONNECTION_OPTIONS, '[auth].[GetUsers]', param, true)
             .then(function (result) {
                 var userData = convertQueryUserTojson(result)
                 if (userData.result == "OK")
@@ -501,11 +488,14 @@ function addUser(data, callback) {
         usernameAlreadyExists(data.username, function (exist) {
             if (!exist) {
                 var newpass = crypter.crypt(data.password, KEY_PASSWORD);
-                var query = `INSERT INTO [dbo].[UserData]
-                ([Username],[Name],[Surname],[Password],[Group])
-            VALUES ('${data.username}','${data.name}','${data.surname}','${newpass}','${data.group}')`
 
-                SQL.singleQuery(connectionOptions, query)
+                var param = SQL.emptyParam()
+                SQL.addInpParam(param, 'Username', TYPES.VarChar, data.username)
+                SQL.addInpParam(param, 'Name', TYPES.VarChar, data.name)
+                SQL.addInpParam(param, 'Surname', TYPES.VarChar, data.surname)
+                SQL.addInpParam(param, 'Password', TYPES.VarChar, newpass)
+                SQL.addInpParam(param, 'Group', TYPES.VarChar, data.group)
+                SQL.singleQuery(CONNECTION_OPTIONS, '[auth].[InsUser]', param, true)
                     .then(function (result) {
                         callback(1);
                     })
@@ -531,12 +521,9 @@ function addUser(data, callback) {
 
 
 function usernameAlreadyExists(username, callback) {
-    var query = `SELECT * 
-            FROM [dbo].[UserData] 
-            where CONVERT(NVARCHAR(MAX), Username)='${username}'
-            `;
-
-    SQL.singleQuery(connectionOptions, query)
+    var param = SQL.emptyParam()
+    SQL.addInpParam(param, 'Username', TYPES.VarChar, username)
+    SQL.singleQuery(CONNECTION_OPTIONS, '[auth].[GetUsers]', param, true)
         .then(function (result) {
             if (result.line.length >= 1)
                 callback(true);
